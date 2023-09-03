@@ -1,0 +1,170 @@
+
+# Non-Seasonal Detection Approach (PVts-beta)
+## **Author**: Yonatan Tarazona Coronel
+
+## Short description
+
+In this document a non-seasonal detection approach ([PVts-beta](https://www.sciencedirect.com/science/article/abs/pii/S1470160X18305326)) is shown. We will demonstrate how to detect changes using a Normalized Difference Fraction Index (NDFI). In order to do it, we will use the **ForesToolboxRS** package with additional codes.
+
+## 1. Datasets
+We will use NDFI to detect changes. This fractions were obtained from the Spectral Mixture Analysis physical model, see [Souza et al. (2005)](https://www.sciencedirect.com/science/article/abs/pii/S0034425705002385), through Landsat-5 TM and Landsat-8 OLI. To obtain NDFI we can use [ForesToolboxRS](https://github.com/ytarazona/ForesToolboxRS) or [forestools](https://github.com/ytarazona/forestools), although it is possible to obtain it using Google Earth Engine.
+
+## 2. Change detection steps
+### **Step1**
+
+Load the [ForesToolboxRS](https://github.com/ytarazona/ForesToolboxRS) library and other necessary libraries.
+
+```{r}
+suppressMessages(library(ForesToolboxRS))
+suppressMessages(library(raster))
+```
+
+### **Step2**
+
+We will detect changes from 2008 to 2018. So that, we will visualize an image from 2008 and another from 2018 to see the changes in the forest.
+
+```R
+path_file <- "I:/PaperSAR-Optico_Improved/CJRS/Review/Datasets/L8_232066_2000-2018_NDFI.tif"
+
+ndfi_stack <- stack(path_file) 
+names(ndfi_stack) <- c("L5_232066_20000823_NDFI", "L5_232066_20010810_NDFI", "L5_232066_20020922_NDFI",
+                       "L5_232066_20030715_NDFI", "L5_232066_20040802_NDFI", "L5_232066_20050720_NDFI",
+                       "L5_232066_20060808_NDFI", "L5_232066_20070827_NDFI", "L5_232066_20080728_NDFI",
+                       "L5_232066_20091003_NDFI", "L5_232066_20100515_NDFI", "L5_232066_20110806_NDFI",
+                       "L8_232066_20130827_NDFI", "L8_232066_20140814_NDFI", "L8_232066_20150801_NDFI",
+                       "L8_232066_20160803_NDFI", "L8_232066_20170806_NDFI", "L8_232066_20180926_NDFI")
+
+# Palette
+colmap <- c("#FFFFFF","#FFFCFF","#FFF9FF","#FFF7FF","#FFF4FF","#FFF2FF","#FFEFFF","#FFECFF","#FFEAFF","#FFE7FF",
+            "#FFE5FF","#FFE2FF","#FFE0FF","#FFDDFF","#FFDAFF","#FFD8FF","#FFD5FF","#FFD3FF","#FFD0FF","#FFCEFF",
+            "#FFCBFF","#FFC8FF","#FFC6FF","#FFC3FF","#FFC1FF","#FFBEFF","#FFBCFF","#FFB9FF","#FFB6FF","#FFB4FF",
+            "#FFB1FF","#FFAFFF","#FFACFF","#FFAAFF","#FFA7FF","#FFA4FF","#FFA2FF","#FF9FFF","#FF9DFF","#FF9AFF",
+            "#FF97FF","#FF95FF","#FF92FF","#FF90FF","#FF8DFF","#FF8BFF","#FF88FF","#FF85FF","#FF83FF","#FF80FF",
+            "#FF7EFF","#FF7BFF","#FF79FF","#FF76FF","#FF73FF","#FF71FF","#FF6EFF","#FF6CFF","#FF69FF","#FF67FF",
+            "#FF64FF","#FF61FF","#FF5FFF","#FF5CFF","#FF5AFF","#FF57FF","#FF55FF","#FF52FF","#FF4FFF","#FF4DFF",
+            "#FF4AFF","#FF48FF","#FF45FF","#FF42FF","#FF40FF","#FF3DFF","#FF3BFF","#FF38FF","#FF36FF","#FF33FF",
+            "#FF30FF","#FF2EFF","#FF2BFF","#FF29FF","#FF26FF","#FF24FF","#FF21FF","#FF1EFF","#FF1CFF","#FF19FF",
+            "#FF17FF","#FF14FF","#FF12FF","#FF0FFF","#FF0CFF","#FF0AFF","#FF07FF","#FF05FF","#FF02FF","#FF00FF",
+            "#FF00FF","#FF0AF4","#FF15E9","#FF1FDF","#FF2AD4","#FF35C9","#FF3FBF","#FF4AB4","#FF55AA","#FF5F9F",
+            "#FF6A94","#FF748A","#FF7F7F","#FF8A74","#FF946A","#FF9F5F","#FFAA55","#FFB44A","#FFBF3F","#FFC935",
+            "#FFD42A","#FFDF1F","#FFE915","#FFF40A","#FFFF00","#FFFF00","#FFFB00","#FFF700","#FFF300","#FFF000",
+            "#FFEC00","#FFE800","#FFE400","#FFE100","#FFDD00","#FFD900","#FFD500","#FFD200","#FFCE00","#FFCA00",
+            "#FFC600","#FFC300","#FFBF00","#FFBB00","#FFB700","#FFB400","#FFB000","#FFAC00","#FFA800","#FFA500",
+            "#FFA500","#F7A400","#F0A300","#E8A200","#E1A200","#D9A100","#D2A000","#CA9F00","#C39F00","#BB9E00",
+            "#B49D00","#AC9C00","#A59C00","#9D9B00","#969A00","#8E9900","#879900","#7F9800","#789700","#709700",
+            "#699600","#619500","#5A9400","#529400","#4B9300","#439200","#349100","#2D9000","#258F00","#1E8E00",
+            "#168E00","#0F8D00","#078C00","#008C00","#008C00","#008700","#008300","#007F00","#007A00","#007600",
+            "#007200","#006E00","#006900","#006500","#006100","#005C00","#005800","#005400","#005000","#004C00")
+
+# Year 2008
+par(mfrow = c(1,2), oma = c(0,1, 0, 1), bty = 'n')
+plot(ndfi_stack[[9]], col = colmap, axes = FALSE) # year 2008
+title("2008", line = -0.5)
+# Year 2018
+plot(ndfi_stack[[18]], col = colmap, axes = FALSE) # year 2018
+title("2018", line = -0.5)
+```
+
+<img src="figures/000051.jpg" width = 100%/>
+
+### **Step3**
+
+We can plot a time serie with breakpoint and then we will detect changes.
+
+```R
+ndfi_serie <- extract(ndfi_stack, cbind(377068.1248,-948511.3412))[1,] # extract with coordinates
+# Plot
+plot(ndfi_serie, pch = 20, xlab = "Index", ylab = "NDFI value", ylim = c(-1, 1.1))
+lines(ndfi_serie, col = "gray45")
+```
+
+<img src="figures/00001a.png" width = 90%/>
+
+Before detecting a breakpoint, it is necessary to apply a smoothing to remove outliers. So, we'll use the **smootH** function from the **ForesToolboxRS** package. The mathematical approach of this method of removing outliers implies the non-modification of the first and last values of the historical series.
+
+If the idea is to detect changes in 2016 (position 16), then we will smooth the data only up to that position (i.e. ndfi[1:16]). This in order not to modify the value of the monitoring position.
+
+```R
+ndfi_smooth <- ndfi_serie
+ndfi_smooth[1:16] <- smootH(ndfi_smooth[1:16])
+
+# Let's plot the real series
+plot(ndfi_serie, pch = 20, xlab = "Index", ylab = "NDFI value", ylim = c(-1, 1.05))
+lines(ndfi_serie, col = "gray45", lty = 3)
+# Let's plot the smoothed series
+lines(ndfi_smooth, col = "blue", ylab = "NDFI value", xlab = "Time")
+points(ndfi_smooth, pch = 20, col = "blue")
+```
+
+<img src="figures/000027.png" width = 90%/>
+
+To detect changes, either we can have a vector (using a specific index (position)) or a time series as input. We will detect changes using a vector. 
+
+Let's use the output of the *smootH* function (**ndfi_smooth**).
+
+Parameters:
+
+- **x**: smoothed series preferably to optimize detections.
+- **startm**: monitoring year, index 16 (i.e., year 2016)
+- **endm**: year of final monitoring, index 16 (i.e., also year 2016)
+- **threshold**: detection threshold (for NDFI series we will use 5). If you are using PV series, NDVI or EVI series you can use 5, 3 or 3 respectively. Please see [Tarazona et al. (2018)](https://www.sciencedirect.com/science/article/abs/pii/S1470160X18305326) for more details.
+
+```R
+# Detect changes in 2016 (position 16)
+cd <- pvts(x = ndfi_smooth, startm = 16, endm = 16, threshold = 5)
+plot(cd, ylab = "NDFI")
+```
+<img src="figures/000003.png" width = 90%/>
+
+### **Step4**
+
+So now we will detect changes using the **pvtsRaster ()** function. First, we need to apply a smoothing to the data. To do this we will use the **smootH ()**.
+
+Again, if the idea is to detect changes from 2008 (position 9) to 2018 (position 18), then we will smooth the data only up to that position (i.e. only until position 9). This in order not to modify the value of the monitoring position (position 18).
+
+```R
+# Raster to matrix
+ndfi_matrix <- as.matrix(ndfi_stack)
+dim(ndfi_matrix) # row*col, bands
+
+# Let's check out if our data contain NAs
+any(is.na(ndfi_matrix))
+
+# Applying a smoothing
+ndfiSmooth <- smootH(x = ndfi_matrix[, 1:9]) # up to position 9 (year 2008)
+ndfi_matrix[,1:9] <- ndfiSmooth
+```
+
+Then we can detect changes with the **pvtsRaster ()** function because we are using a matrix as input. This function can read *matrix* and *raster*.
+
+Parameters:
+
+- **x**: smoothed series preferably to optimize detections.
+- **startm**: monitoring year, index 9 (i.e., year 2008)
+- **endm**: year of final monitoring, index 18 (i.e., also year 2018)
+- **threshold**: detection threshold (for NDFI series we will use 5). If you are using PV series, NDVI or EVI series you can use 5, 3 or 3 respectively. Please see [Tarazona et al. (2018)](https://www.sciencedirect.com/science/article/abs/pii/S1470160X18305326) for more details.
+
+```R
+# Detecting changes with a Non-seasonal detection approach
+ndfiChanges <- pvtsRaster(x = ndfi_matrix, startm = 9, endm = 18,  threshold = 5)
+```
+
+Finally, we can save this result in a raster data.
+
+```R
+rasterChanges <- raster(ndfi_stack)
+values(rasterChanges) <- ndfiChanges
+plot(rasterChanges)
+```
+<img src="figures/000004.png" width = 80%/>
+
+```R
+rasterChanges[rasterChanges == 0] <- NA
+# Visualizamos la máscara en la imagen satelital
+par(mfrow = c(1,2), oma = c(0,1, 0, 2), bty = 'n')
+plot(ndfi_stack[[18]], col = colmap, axes = FALSE) # year 2018
+title("NDFI 2018", line = -1)
+plot(rasterChanges, col = "black", cex.lab=0.5, cex.axis=0.3, cex.main=0.5, axes = FALSE)
+title("Change Detection - PVts-β", line = -1)
+```
+<img src="figures/00009f.png" width = 100%/>
